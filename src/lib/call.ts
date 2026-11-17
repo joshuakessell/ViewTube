@@ -3,8 +3,16 @@ import type { SignalPayload } from './transport';
 export type CallStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
 
 export interface CallOptions {
-  /** Exactly one side must be polite; it yields when both make an offer at once. */
-  polite: boolean;
+  /**
+   * Exactly one side is the caller. Only the caller ever makes offers; the
+   * other side only answers, and asks the caller when it wants a restart.
+   *
+   * (Letting both sides offer and resolving the collision by rolling one offer
+   * back is the textbook alternative, but a rollback that lands right after
+   * the offer leaves Chromium gathering no network candidates at all, and the
+   * call never connects.)
+   */
+  caller: boolean;
   iceServers: RTCIceServer[];
   local: MediaStream | null;
   sendSignal(signal: SignalPayload): void;
@@ -13,19 +21,16 @@ export interface CallOptions {
 }
 
 const MAX_AUTO_RESTARTS = 3;
+const RESTART_MIN_GAP_MS = 3000;
 /** Keep the camera feed modest so it doesn't fight YouTube for bandwidth. */
 const VIDEO_MAX_BITRATE = 700_000;
 
-/**
- * One peer-to-peer audio/video connection, using the WebRTC "perfect
- * negotiation" pattern so either side can (re)negotiate at any time.
- */
+/** One peer-to-peer audio/video connection. */
 export class Call {
   private readonly pc: RTCPeerConnection;
-  private makingOffer = false;
-  private ignoreOffer = false;
   private closed = false;
   private restarts = 0;
+  private lastRestart = 0;
   private queue: Promise<void> = Promise.resolve();
   private pending: RTCIceCandidateInit[] = [];
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
@@ -40,26 +45,24 @@ export class Call {
       pc.addTrack(track, opts.local!);
       sending.add(track.kind);
     });
-    // Whoever has no mic/camera still needs to receive. Only the impolite side
-    // adds these (its offer always wins), so the two sides can't both create
-    // unmatched receive-only lines.
-    if (!opts.polite) {
+
+    if (opts.caller) {
+      // The offer has to ask for audio and video even if we have no mic or
+      // camera of our own to send.
       for (const kind of ['audio', 'video'] as const) {
         if (!sending.has(kind)) pc.addTransceiver(kind, { direction: 'recvonly' });
       }
+      pc.onnegotiationneeded = async () => {
+        try {
+          await pc.setLocalDescription();
+          if (!this.closed && pc.localDescription) opts.sendSignal({ description: pc.localDescription.toJSON() });
+        } catch (err) {
+          console.warn('[call] offer failed', err);
+        }
+      };
     }
-
-    pc.onnegotiationneeded = async () => {
-      try {
-        this.makingOffer = true;
-        await pc.setLocalDescription();
-        if (pc.localDescription) opts.sendSignal({ description: pc.localDescription.toJSON() });
-      } catch (err) {
-        console.warn('[call] offer failed', err);
-      } finally {
-        this.makingOffer = false;
-      }
-    };
+    // The answering side adds its tracks above and they are matched to the
+    // caller's offer when it arrives; it never needs to offer.
 
     pc.onicecandidate = ({ candidate }) => {
       if (!candidate) return;
@@ -76,25 +79,25 @@ export class Call {
     pc.onconnectionstatechange = () => this.onConnectionState();
   }
 
-  /** Feed in a description or candidates received from the other side. */
+  /** Feed in something received from the other side. */
   handleSignal(signal: SignalPayload): void {
     // Strictly one at a time: candidates must be added after their description.
     this.queue = this.queue.then(() => this.process(signal)).catch((err) => console.warn('[call] signal failed', err));
   }
 
-  /** Try to re-establish the connection, e.g. after switching networks. */
+  /** The user asked to try again after the call gave up. */
   retry(): void {
     if (this.closed) return;
     this.restarts = 0;
     this.opts.onStatus('reconnecting');
-    this.pc.restartIce();
+    this.restart();
   }
 
-  /** Nudge a connection that might be dead without resetting the retry budget. */
+  /** Nudge a connection that might be dead, e.g. after switching networks. */
   checkConnection(): void {
     if (this.closed) return;
     const state = this.pc.connectionState;
-    if (state === 'disconnected' || state === 'failed') this.pc.restartIce();
+    if (state === 'disconnected' || state === 'failed') this.restart();
   }
 
   close(): void {
@@ -109,26 +112,38 @@ export class Call {
     this.pc.close();
   }
 
-  private async process({ description, candidates }: SignalPayload): Promise<void> {
+  private async process({ description, candidates, restart }: SignalPayload): Promise<void> {
     if (this.closed) return;
     const pc = this.pc;
+
+    if (restart && this.opts.caller) this.restart();
+
     if (description) {
-      const collision = description.type === 'offer' && (this.makingOffer || pc.signalingState !== 'stable');
-      this.ignoreOffer = !this.opts.polite && collision;
-      if (this.ignoreOffer) return;
-      await pc.setRemoteDescription(description); // rolls back our own offer if we are polite
+      // Offers only travel caller -> answerer, answers the other way.
+      if ((description.type === 'offer') === this.opts.caller) return;
+      await pc.setRemoteDescription(description);
       if (description.type === 'offer') {
         await pc.setLocalDescription();
-        if (pc.localDescription) this.opts.sendSignal({ description: pc.localDescription.toJSON() });
+        if (!this.closed && pc.localDescription) this.opts.sendSignal({ description: pc.localDescription.toJSON() });
       }
     }
+
     for (const candidate of candidates ?? []) {
       try {
         await pc.addIceCandidate(candidate);
       } catch (err) {
-        if (!this.ignoreOffer) console.warn('[call] bad candidate', err);
+        console.warn('[call] bad candidate', err);
       }
     }
+  }
+
+  /** Find a new network path, keeping the same connection. */
+  private restart(): void {
+    const now = Date.now();
+    if (now - this.lastRestart < RESTART_MIN_GAP_MS) return; // both sides usually notice at once
+    this.lastRestart = now;
+    if (this.opts.caller) this.pc.restartIce(); // leads to a fresh offer
+    else this.opts.sendSignal({ restart: true });
   }
 
   private flushCandidates(): void {
@@ -162,17 +177,17 @@ export class Call {
         void this.capVideoBitrate();
         break;
       case 'disconnected':
-        // Often recovers on its own within a few seconds; if not, restart ICE.
+        // Often recovers on its own within a few seconds; if not, restart.
         this.opts.onStatus('reconnecting');
         this.disconnectTimer = setTimeout(() => {
-          if (!this.closed && pc.connectionState === 'disconnected') pc.restartIce();
+          if (!this.closed && pc.connectionState === 'disconnected') this.restart();
         }, 4000);
         break;
       case 'failed':
         if (this.restarts < MAX_AUTO_RESTARTS) {
           this.restarts += 1;
           this.opts.onStatus('reconnecting');
-          pc.restartIce();
+          this.restart();
         } else {
           this.opts.onStatus('failed');
         }

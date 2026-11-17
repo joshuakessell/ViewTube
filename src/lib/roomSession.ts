@@ -281,7 +281,7 @@ export class RoomSession {
 
     const peerId = info.from;
     this.call = new Call({
-      polite: this.selfId < peerId,
+      caller: this.selfId > peerId,
       iceServers: ICE_SERVERS,
       local: this.opts.local,
       sendSignal: (signal) => this.send({ t: 'signal', from: this.selfId, to: peerId, sid, signal }),

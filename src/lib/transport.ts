@@ -5,6 +5,8 @@ import type { Playback } from './playbackSync';
 export interface SignalPayload {
   description?: RTCSessionDescriptionInit;
   candidates?: RTCIceCandidateInit[];
+  /** From the answering side: please restart the connection. */
+  restart?: boolean;
 }
 
 interface Presence {
