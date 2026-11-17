@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:relay": "node scripts/check-relay.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

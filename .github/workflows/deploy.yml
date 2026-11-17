@@ -33,6 +33,19 @@ jobs:
         with:
           path: dist
 
+  # Not required for the deploy: proves the two phones can reach each other
+  # through the relay, from outside our own machines.
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:relay
+
   deploy:
     needs: build
     runs-on: ubuntu-latest

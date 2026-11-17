@@ -22,7 +22,7 @@ npm run build   # type-check and build to dist/
 
 ## Configuration
 
-Copy `.env.example` to `.env.local` (or `.env.production` for a deployed build).
+The deployed build reads `.env.production`, which is committed. For local development against the real relay, copy it to `.env.local`.
 
 | Variable | Purpose |
 | --- | --- |
@@ -30,6 +30,10 @@ Copy `.env.example` to `.env.local` (or `.env.production` for a deployed build).
 | `VITE_ICE_SERVERS` | Optional JSON array of ICE servers. Defaults to public STUN, which is enough on most home Wi-Fi. Add a TURN server if the call fails to connect on mobile data. |
 
 The page has to be served over HTTPS for the camera and microphone to work (localhost is exempt).
+
+## Deploying
+
+Every push to `main` builds the app and publishes it to GitHub Pages (`.github/workflows/deploy.yml`). The same workflow runs `npm run check:relay`, which sends a message between two clients through the configured relay.
 
 ## How it works
 
