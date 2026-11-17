@@ -255,6 +255,9 @@ export class RoomSession {
       const guest = this.challenger;
       this.challenger = null;
       if (!guest || this.stopped) return;
+      // Our partner may have left and the newcomer taken their place while we
+      // were checking; then there is nothing left to decide.
+      if (this.peer?.id === guest.from) return;
       if (this.peer && this.lastHeard >= guest.asked) {
         this.send({ t: 'full', from: this.selfId, to: guest.from });
         return;
