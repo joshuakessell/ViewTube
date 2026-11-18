@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { PS } from '../lib/player';
 import { addRecent, listRecents } from '../lib/recents';
 import { inviteLink } from '../lib/roomCode';
 import { RoomSession, type RoomSnapshot } from '../lib/roomSession';
+import { useCanSearch } from '../lib/search';
 import { buzz, cx, morph, useMediaQuery } from '../lib/ui';
+import { usePlaylist } from '../lib/usePlaylist';
 import { thumbnailUrl, useVideoInfo } from '../lib/videoInfo';
 import { parseYouTubeUrl, type ParsedVideo } from '../lib/youtube';
 import { CallPane } from './CallPane';
 import { Icon, type IconName } from './Icon';
-import { LinkSheet } from './LinkSheet';
 import type { Joined } from './Lobby';
 import { NowPlaying } from './NowPlaying';
 import { VideoPane } from './VideoPane';
+import { VideoPicker } from './VideoPicker';
 
 type Front = 'video' | 'call';
 
@@ -47,6 +50,13 @@ function RoomView({ session, joined, initialVideo, onInitialVideoUsed, onLeave }
   const { sync } = session;
   const { videoId } = snap.playback;
   const info = useVideoInfo(videoId);
+  const canSearch = useCanSearch();
+  const playlist = usePlaylist({
+    room: joined.room,
+    changedElsewhere: snap.playlistChanges,
+    announce: session.announcePlaylist,
+    onProblem: showToast,
+  });
 
   useWakeLock();
 
@@ -93,6 +103,29 @@ function RoomView({ session, joined, initialVideo, onInitialVideoUsed, onLeave }
     };
   }, [info]);
 
+  // When a video from the playlist ends, the one after it starts for both.
+  // One phone does this, so the next video isn't started twice; the other
+  // steps in only if that somehow doesn't happen.
+  const ended = videoId !== null && snap.player.state === PS.ENDED;
+  const at = playlist.items.findIndex((item) => item.videoId === videoId);
+  const nextId = at >= 0 ? (playlist.items[at + 1]?.videoId ?? null) : null;
+  const peerId = snap.peer?.id ?? null;
+  useEffect(() => {
+    if (!ended || !nextId) return;
+    const leads = peerId === null || session.selfId > peerId;
+    const timer = setTimeout(() => sync.setVideo(nextId, 0, true), leads ? 900 : 4500);
+    return () => clearTimeout(timer);
+  }, [ended, nextId, peerId, session, sync]);
+
+  const duration = snap.player.duration > 0 ? Math.round(snap.player.duration) : null;
+  const saved = videoId !== null && playlist.has(videoId);
+  const toggleSaved = () => {
+    if (!videoId) return;
+    buzz();
+    if (saved) playlist.remove(videoId);
+    else playlist.add({ videoId, title: info?.title ?? 'YouTube video', author: info?.author ?? '', duration, addedBy: joined.name });
+  };
+
   // Real browser fullscreen where it exists (Android); on iPhone, which has no
   // such API for pages, the pane simply fills the window.
   const enterFull = useCallback(() => {
@@ -122,6 +155,7 @@ function RoomView({ session, joined, initialVideo, onInitialVideoUsed, onLeave }
   };
   const swap = () => bring(front === 'video' ? 'call' : 'video');
 
+  const closePicker = useCallback(() => setPicking(false), []);
   const pick = (video: ParsedVideo) => {
     sync.setVideo(video.videoId, video.start);
     setPicking(false);
@@ -180,8 +214,8 @@ function RoomView({ session, joined, initialVideo, onInitialVideoUsed, onLeave }
             <Icon name="invite" size={19} />
           </button>
           <button type="button" className={cx('chip', !videoId && 'accent')} onClick={() => setPicking(true)} aria-label="Pick a video">
-            <Icon name="plus" size={17} weight="bold" />
-            <span>Video</span>
+            <Icon name={canSearch ? 'search' : 'plus'} size={17} weight="bold" />
+            <span>Videos</span>
           </button>
         </div>
       </header>
@@ -192,13 +226,24 @@ function RoomView({ session, joined, initialVideo, onInitialVideoUsed, onLeave }
         view={snap.player}
         isFront={front === 'video'}
         floating={portrait && front === 'call' && !full}
-        hasRecents={hasRecents}
+        canSearch={canSearch}
+        hasSaved={hasRecents || playlist.items.length > 0}
         onBringFront={() => bring('video')}
         onPaste={pasteLink}
         onBrowse={() => setPicking(true)}
       />
 
-      {videoId && <NowPlaying sync={sync} playback={snap.playback} view={snap.player} info={info} peerName={snap.peer?.name ?? null} />}
+      {videoId && (
+        <NowPlaying
+          sync={sync}
+          playback={snap.playback}
+          view={snap.player}
+          info={info}
+          peerName={snap.peer?.name ?? null}
+          saved={saved}
+          onToggleSaved={toggleSaved}
+        />
+      )}
 
       <CallPane
         snap={snap}
@@ -254,7 +299,16 @@ function RoomView({ session, joined, initialVideo, onInitialVideoUsed, onLeave }
         </FullControls>
       )}
 
-      {picking && <LinkSheet onPick={pick} onClose={() => setPicking(false)} />}
+      {picking && (
+        <VideoPicker
+          playlist={playlist}
+          current={videoId ? { videoId, info, duration } : null}
+          selfName={joined.name}
+          canSearch={canSearch}
+          onPick={pick}
+          onClose={closePicker}
+        />
+      )}
 
       {toast && (
         <div className="toast" role="status" key={toast.id}>

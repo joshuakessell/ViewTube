@@ -6,6 +6,13 @@ export const SUPABASE_KEY: string | undefined = env.VITE_SUPABASE_KEY || undefin
 /** Without Supabase the app only connects tabs of the same browser (dev mode). */
 export const HAS_SIGNALING = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
+/**
+ * Where YouTube searches are sent: the project's `youtube-search` function,
+ * which keeps the YouTube API key on the server. Null when there is nowhere to
+ * send them, and the app then offers pasting a link only.
+ */
+export const SEARCH_URL: string | null = env.VITE_SEARCH_URL || (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/youtube-search` : null);
+
 const DEFAULT_ICE: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
 ];

@@ -14,10 +14,13 @@ interface NowPlayingProps {
   info: VideoInfo | null;
   /** Who else these controls reach, for the wording. */
   peerName: string | null;
+  /** Whether this video is in the room's playlist. */
+  saved: boolean;
+  onToggleSaved(): void;
 }
 
 /** What is playing, and the remote control that works both phones at once. */
-export function NowPlaying({ sync, playback, view, info, peerName }: NowPlayingProps) {
+export function NowPlaying({ sync, playback, view, info, peerName, saved, onToggleSaved }: NowPlayingProps) {
   // While the thumb is being dragged, show the drag position and send one seek on release.
   const [drag, setDrag] = useState<number | null>(null);
   const dragRef = useRef<number | null>(null);
@@ -62,7 +65,19 @@ export function NowPlaying({ sync, playback, view, info, peerName }: NowPlayingP
 
         <div className="now-meta">
           <strong>{info?.title ?? 'YouTube video'}</strong>
-          <span>{info?.author || (peerName ? `Playing for you and ${peerName}` : 'Ready when you are')}</span>
+          <div className="now-sub">
+            <span>{info?.author || (peerName ? `Playing for you and ${peerName}` : 'Ready when you are')}</span>
+            <button
+              type="button"
+              className={cx('save-chip', saved && 'saved')}
+              onClick={onToggleSaved}
+              aria-pressed={saved}
+              aria-label={saved ? 'Remove this video from the playlist' : 'Add this video to the playlist'}
+            >
+              <Icon name={saved ? 'check' : 'plus'} size={13} weight="bold" />
+              {saved ? 'Saved' : 'Playlist'}
+            </button>
+          </div>
         </div>
 
         <button

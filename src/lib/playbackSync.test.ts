@@ -296,6 +296,22 @@ describe('PlaybackSync', () => {
     expect(a.sync.expected()).toBe(30);
   });
 
+  it('carries straight on into the next video of a playlist, on both phones', () => {
+    const { a, b } = watching();
+    a.player.tapPlay();
+    vi.advanceTimersByTime(3000);
+
+    a.sync.setVideo('aqz-KE-bpKQ', 0, true);
+    vi.advanceTimersByTime(4000);
+    for (const device of [a, b]) {
+      expect(device.player.videoId).toBe('aqz-KE-bpKQ');
+      expect(device.player.state).toBe(PS.PLAYING);
+      expect(device.sync.getPlayback().playing).toBe(true);
+    }
+    expect(Math.abs(a.player.getTime() - b.player.getTime())).toBeLessThan(0.5);
+    expect(a.player.getTime()).toBeGreaterThan(3);
+  });
+
   it('settles on one state when both act at the same moment', () => {
     const { a, b } = watching(200);
     a.player.tapPlay();

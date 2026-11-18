@@ -1156,7 +1156,7 @@ input::placeholder {
 }
 
 .now-meta strong,
-.now-meta span {
+.now-sub span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1168,9 +1168,53 @@ input::placeholder {
   letter-spacing: -0.005em;
 }
 
-.now-meta span {
+.now-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.now-sub span {
   color: var(--dim);
   font-size: 13px;
+}
+
+/* Keeps the video in the room's playlist. Small, but padded out to a fair tap target. */
+.save-chip {
+  flex: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--glass-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  transition:
+    transform 160ms var(--ease),
+    background-color 200ms,
+    color 200ms;
+}
+
+.save-chip::after {
+  content: '';
+  position: absolute;
+  inset: -9px -6px;
+}
+
+.save-chip:active {
+  transform: scale(0.94);
+}
+
+.save-chip.saved {
+  border-color: transparent;
+  background: rgb(127 229 176 / 0.16);
+  color: var(--live);
 }
 
 .skip {
@@ -1360,6 +1404,8 @@ input::placeholder {
   overflow-y: auto;
   overscroll-behavior: contain;
   display: grid;
+  /* (minmax: a long title must be cut short, not widen the sheet) */
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   padding: 14px 14px 16px;
   border: 1px solid var(--hairline);
@@ -1427,7 +1473,80 @@ input::placeholder {
   font-size: 13.5px;
 }
 
-.recents {
+.results-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 4px;
+}
+
+.results-head h3 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-btn {
+  flex: none;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--lamp);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+/* Playlist | Watched before */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: rgb(11 9 8 / 0.5);
+}
+
+.tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--dim);
+  font-size: 14px;
+  font-weight: 650;
+  transition:
+    background-color 200ms,
+    color 200ms;
+}
+
+.tabs button[aria-selected='true'] {
+  background: var(--glass-2);
+  color: var(--text);
+}
+
+.tabs b {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ember);
+  color: var(--on-ember);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.sheet section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.video-list {
   display: grid;
   gap: 2px;
   margin: 0;
@@ -1435,11 +1554,23 @@ input::placeholder {
   list-style: none;
 }
 
-.recents button {
+.video-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 16px;
+}
+
+.video-row.is-playing {
+  background: rgb(255 120 71 / 0.1);
+}
+
+.video-row-main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 100%;
   padding: 6px;
   border: 0;
   border-radius: 16px;
@@ -1447,26 +1578,53 @@ input::placeholder {
   text-align: left;
 }
 
-.recents button:active {
+.video-row-main:active {
   background: var(--glass-2);
 }
 
-.recents img {
+.thumb {
   flex: none;
+  position: relative;
   width: 96px;
   height: 54px;
+  overflow: hidden;
   border-radius: 10px;
   background: var(--ink-3);
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.recent-text {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
+.thumb-length {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgb(11 9 8 / 0.82);
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
-.recent-text strong {
+.thumb-length.live {
+  background: var(--danger);
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.video-row-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.video-row-text strong {
   display: -webkit-box;
   overflow: hidden;
   font-size: 14.5px;
@@ -1477,12 +1635,89 @@ input::placeholder {
   line-clamp: 2;
 }
 
-.recent-text span {
+.video-row-text span {
   overflow: hidden;
   color: var(--dim);
   font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.video-row.is-playing .video-row-text span {
+  color: var(--lamp);
+  font-weight: 650;
+}
+
+/* The + (or tick, or x) at the end of a row. */
+.row-action {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--glass-2);
+  transition:
+    transform 160ms var(--ease),
+    background-color 200ms,
+    color 200ms;
+}
+
+.row-action:active {
+  transform: scale(0.9);
+}
+
+.row-action.done {
+  background: rgb(127 229 176 / 0.16);
+  color: var(--live);
+}
+
+/* placeholder rows while a search is on its way */
+.video-row.skeleton {
+  gap: 12px;
+  padding: 6px;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.video-row.skeleton i {
+  display: block;
+  height: 12px;
+  width: 85%;
+  border-radius: 6px;
+  background: var(--glass-2);
+}
+
+.video-row.skeleton i + i {
+  width: 45%;
+}
+
+.add-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1.5px dashed rgb(255 238 224 / 0.22);
+  border-radius: 16px;
+  background: none;
+  color: var(--lamp);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+}
+
+.add-current span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-current svg {
+  flex: none;
 }
 
 /* --- toast -------------------------------------------------------------------------------- */

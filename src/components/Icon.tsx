@@ -5,8 +5,10 @@ import { ArrowsDownUp } from '@phosphor-icons/react/dist/csr/ArrowsDownUp';
 import { ArrowsInSimple } from '@phosphor-icons/react/dist/csr/ArrowsInSimple';
 import { ArrowsLeftRight } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight';
 import { ArrowsOutSimple } from '@phosphor-icons/react/dist/csr/ArrowsOutSimple';
+import { Check } from '@phosphor-icons/react/dist/csr/Check';
 import { ClipboardText } from '@phosphor-icons/react/dist/csr/ClipboardText';
 import { Export } from '@phosphor-icons/react/dist/csr/Export';
+import { MagnifyingGlass } from '@phosphor-icons/react/dist/csr/MagnifyingGlass';
 import { Microphone } from '@phosphor-icons/react/dist/csr/Microphone';
 import { MicrophoneSlash } from '@phosphor-icons/react/dist/csr/MicrophoneSlash';
 import { Pause } from '@phosphor-icons/react/dist/csr/Pause';
@@ -36,6 +38,8 @@ const ICONS = {
   pause: Pause,
   paste: ClipboardText,
   plus: Plus,
+  check: Check,
+  search: MagnifyingGlass,
   back: ArrowCounterClockwise,
   forward: ArrowClockwise,
   shuffle: Shuffle,

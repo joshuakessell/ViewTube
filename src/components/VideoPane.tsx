@@ -12,13 +12,27 @@ interface VideoPaneProps {
   isFront: boolean;
   /** Shown as a small tile floating over the call, which can be dragged to another corner. */
   floating: boolean;
-  hasRecents: boolean;
+  /** Whether YouTube can be searched from here, or only links pasted. */
+  canSearch: boolean;
+  /** Whether the picker has anything saved to choose from. */
+  hasSaved: boolean;
   onBringFront(): void;
   onPaste(): void;
   onBrowse(): void;
 }
 
-export function VideoPane({ sync, videoId, view, isFront, floating, hasRecents, onBringFront, onPaste, onBrowse }: VideoPaneProps) {
+export function VideoPane({
+  sync,
+  videoId,
+  view,
+  isFront,
+  floating,
+  canSearch,
+  hasSaved,
+  onBringFront,
+  onPaste,
+  onBrowse,
+}: VideoPaneProps) {
   const paneRef = useRef<HTMLElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const corner = useCornerDrag(paneRef, floating, 'tr');
@@ -58,16 +72,34 @@ export function VideoPane({ sync, videoId, view, isFront, floating, hasRecents, 
           <div className="video-empty-art" aria-hidden="true" />
           <div className="video-empty-body">
             <h2>What are we watching?</h2>
-            <p>Paste a YouTube link and it plays for both of you.</p>
+            <p>
+              {canSearch
+                ? 'Search YouTube or paste a link. It plays for both of you.'
+                : 'Paste a YouTube link and it plays for both of you.'}
+            </p>
             <div className="video-empty-actions">
-              <button type="button" className="btn primary" onClick={onPaste}>
-                <Icon name="paste" size={19} weight="bold" />
-                Paste link
-              </button>
-              {hasRecents && (
-                <button type="button" className="btn" onClick={onBrowse}>
-                  Recent
-                </button>
+              {canSearch ? (
+                <>
+                  <button type="button" className="btn primary" onClick={onBrowse}>
+                    <Icon name="search" size={19} weight="bold" />
+                    Find a video
+                  </button>
+                  <button type="button" className="btn" onClick={onPaste}>
+                    Paste link
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="btn primary" onClick={onPaste}>
+                    <Icon name="paste" size={19} weight="bold" />
+                    Paste link
+                  </button>
+                  {hasSaved && (
+                    <button type="button" className="btn" onClick={onBrowse}>
+                      Saved
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

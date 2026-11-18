@@ -135,10 +135,14 @@ export class PlaybackSync {
 
   // --- things the user does through our own controls -----------------------------
 
-  setVideo(videoId: string, start = 0): void {
-    // Start paused: whoever taps play starts it for both, so the clock never
-    // runs while nobody is actually watching yet.
-    this.commit({ videoId, playing: false, position: start, rate: 1 }, true);
+  /**
+   * Put a video on for both. Normally it starts paused: whoever taps play
+   * starts it for both, so the clock never runs while nobody is actually
+   * watching yet. `playing` is for carrying straight on, as when a playlist
+   * moves to its next video.
+   */
+  setVideo(videoId: string, start = 0, playing = false): void {
+    this.commit({ videoId, playing, position: start, rate: 1 }, true);
   }
 
   play(): void {

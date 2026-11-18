@@ -21,6 +21,8 @@ export interface RoomSnapshot {
   mic: boolean;
   cam: boolean;
   notice: { id: number; text: string } | null;
+  /** Goes up each time the other person edits the room's playlist. */
+  playlistChanges: number;
 }
 
 export interface RoomOptions {
@@ -67,6 +69,7 @@ export class RoomSession {
   private remoteStream: MediaStream | null = null;
   private notice: RoomSnapshot['notice'] = null;
   private noticeId = 0;
+  private playlistChanges = 0;
 
   /** Estimated (peer clock - our clock) in ms, from ping round trips. */
   private offset = 0;
@@ -157,6 +160,11 @@ export class RoomSession {
     this.call?.retry();
   }
 
+  /** Tell the other person that we edited the room's playlist. */
+  readonly announcePlaylist = (): void => {
+    this.send({ t: 'playlist', from: this.selfId });
+  };
+
   // --- messages ----------------------------------------------------------------------
 
   private onMessage(msg: Msg): void {
@@ -221,6 +229,11 @@ export class RoomSession {
         break;
       case 'media':
         this.updatePeer(msg.from, msg);
+        break;
+      case 'playlist':
+        if (this.peer?.id !== msg.from) break;
+        this.playlistChanges += 1;
+        this.emit();
         break;
     }
   }
@@ -421,6 +434,7 @@ export class RoomSession {
       playback: this.sync.getPlayback(),
       player: this.sync.getView(),
       notice: this.notice,
+      playlistChanges: this.playlistChanges,
       ...this.localMedia(),
     };
   }

@@ -1,6 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { HAS_SIGNALING, SUPABASE_KEY, SUPABASE_URL } from '../config';
+import { HAS_SIGNALING } from '../config';
 import type { Playback } from './playbackSync';
+import { supabase } from './supabaseClient';
 
 export interface SignalPayload {
   description?: RTCSessionDescriptionInit;
@@ -27,7 +27,9 @@ export type Msg =
   | { t: 'ping'; from: string; to: string; sid: number; t0: number; rev: number; by: string }
   | { t: 'pong'; from: string; to: string; t0: number; t1: number }
   | { t: 'playback'; from: string; state: Playback }
-  | { t: 'media'; from: string; mic: boolean; cam: boolean };
+  | { t: 'media'; from: string; mic: boolean; cam: boolean }
+  /** "I changed the room's playlist": the other device re-reads it. */
+  | { t: 'playlist'; from: string };
 
 export interface Transport {
   send(msg: Msg): void;
@@ -39,17 +41,6 @@ export interface TransportHandlers {
   onOpen(): void;
   onClose(): void;
   onMessage(msg: Msg): void;
-}
-
-let client: SupabaseClient | null = null;
-
-function supabase(): SupabaseClient {
-  client ??= createClient(SUPABASE_URL!, SUPABASE_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    // Call setup sends a short burst (offer, answer, candidates, pings).
-    realtime: { params: { eventsPerSecond: 40 } },
-  });
-  return client;
 }
 
 /** A Supabase Realtime broadcast channel: a relay both phones can reach. */

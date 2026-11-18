@@ -2,7 +2,8 @@
 
 Watch a YouTube video with one other person, in sync, while on a video call with them. A web app, so it runs on iPhone (Safari) and Android (Chrome) from the same link and can be added to the home screen.
 
-- Paste a YouTube link (or pick something you watched before) and it is cued for both of you. Play, pause and seeking apply to both.
+- Search YouTube, paste a link, or pick something you watched before, and it is cued for both of you. Play, pause and seeking apply to both.
+- Each room has a playlist that both people see and edit. Save a video with the + beside it (or the Playlist chip under the one playing); when a playlist video ends, the next one starts for both.
 - The video and the call share the screen. With the video in front, the two of you sit side by side beneath it; tap the call and it takes over the screen with the video as a small tile you can drag to any corner. Tap the smaller one to swap back.
 - Either one can go full screen. The other keeps running underneath, so you still hear it.
 
@@ -27,9 +28,19 @@ The deployed build reads `.env.production`, which is committed. For local develo
 | Variable | Purpose |
 | --- | --- |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` | A Supabase project URL and its publishable key. The two devices find each other and exchange play/pause/seek through a Realtime broadcast channel. No tables are used. |
+| `VITE_SEARCH_URL` | Optional. Where searches are sent; defaults to the `youtube-search` function of the Supabase project above. |
 | `VITE_ICE_SERVERS` | Optional JSON array of ICE servers. Defaults to public STUN, which is enough on most home Wi-Fi. Add a TURN server if the call fails to connect on mobile data. |
 
 The page has to be served over HTTPS for the camera and microphone to work (localhost is exempt).
+
+## The Supabase side
+
+Besides the Realtime channel, the project holds two things, both kept in `supabase/` here:
+
+- **The playlist** (`supabase/migrations/`): one table, reachable only through the functions `playlist_list`, `playlist_add` and `playlist_remove`, each of which takes the room code. The table itself is closed to the public key, because listing it would list everyone's room codes.
+- **Search** (`supabase/functions/youtube-search/`): an Edge Function that calls the YouTube Data API, so that the API key stays on the server. It reads the key from the function secret `YOUTUBE_API_KEY` (Supabase dashboard: Edge Functions, Secrets). Until that secret exists the app hides search and offers pasting a link only. A YouTube API key allows about 99 searches a day; repeats of a recent search are answered from memory and don't count.
+
+Neither is deployed by the GitHub workflow. After changing them, apply the SQL to the project and redeploy the function (`supabase functions deploy youtube-search --no-verify-jwt`; the function checks the caller's key itself, because the platform's own check doesn't accept publishable keys).
 
 ## Deploying
 
@@ -41,7 +52,9 @@ Every push to `main` builds the app and publishes it to GitHub Pages (`.github/w
 - `src/lib/call.ts` is the peer-to-peer audio/video connection (WebRTC).
 - `src/lib/roomSession.ts` ties the two together: finding the other person, reconnecting, estimating the clock difference between the devices.
 - `src/lib/transport.ts` is the relay: Supabase Realtime, or a `BroadcastChannel` when unconfigured.
-- `src/components/Room.tsx` is the screen, with `VideoPane`, `CallPane`, `NowPlaying` (the shared remote) and `LinkSheet` (the video picker) beside it. The two panes never move in the DOM (moving the YouTube iframe would reload it); swapping only changes which grid area each one occupies, and the browser's view transitions animate the change where they exist.
+- `src/lib/playlist.ts` and `usePlaylist.ts` are the room's playlist: saved in Supabase (or in the browser when unconfigured), re-read whenever the other person says they changed it.
+- `src/lib/search.ts` asks the search function, and first asks it whether search is set up at all.
+- `src/components/Room.tsx` is the screen, with `VideoPane`, `CallPane`, `NowPlaying` (the shared remote) and `VideoPicker` (search, paste, playlist) beside it. The two panes never move in the DOM (moving the YouTube iframe would reload it); swapping only changes which grid area each one occupies, and the browser's view transitions animate the change where they exist.
 
 ## Look and feel
 
