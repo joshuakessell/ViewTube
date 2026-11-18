@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Lobby, type Joined } from './components/Lobby';
 import { Room } from './components/Room';
 import { stopMedia } from './lib/media';
+import { morph } from './lib/ui';
 import { parseYouTubeUrl, type ParsedVideo } from './lib/youtube';
 
 /**
@@ -21,7 +22,7 @@ export function App() {
   const [joined, setJoined] = useState<Joined | null>(null);
   const [sharedVideo, setSharedVideo] = useState(readSharedVideo);
 
-  if (!joined) return <Lobby hasSharedVideo={sharedVideo !== null} onJoin={setJoined} />;
+  if (!joined) return <Lobby hasSharedVideo={sharedVideo !== null} onJoin={(next) => morph(() => setJoined(next))} />;
 
   return (
     <Room
@@ -31,7 +32,7 @@ export function App() {
       onInitialVideoUsed={() => setSharedVideo(null)}
       onLeave={() => {
         stopMedia(joined.stream);
-        setJoined(null);
+        morph(() => setJoined(null));
       }}
     />
   );

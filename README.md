@@ -2,8 +2,8 @@
 
 Watch a YouTube video with one other person, in sync, while on a video call with them. A web app, so it runs on iPhone (Safari) and Android (Chrome) from the same link and can be added to the home screen.
 
-- Paste a YouTube link and it is cued for both of you. Play, pause and seeking apply to both.
-- The video and the call share the screen: one in front, the other as a side tile. Tap the side tile to swap them.
+- Paste a YouTube link (or pick something you watched before) and it is cued for both of you. Play, pause and seeking apply to both.
+- The video and the call share the screen. With the video in front, the two of you sit side by side beneath it; tap the call and it takes over the screen with the video as a small tile you can drag to any corner. Tap the smaller one to swap back.
 - Either one can go full screen. The other keeps running underneath, so you still hear it.
 
 ## Run it
@@ -41,7 +41,14 @@ Every push to `main` builds the app and publishes it to GitHub Pages (`.github/w
 - `src/lib/call.ts` is the peer-to-peer audio/video connection (WebRTC).
 - `src/lib/roomSession.ts` ties the two together: finding the other person, reconnecting, estimating the clock difference between the devices.
 - `src/lib/transport.ts` is the relay: Supabase Realtime, or a `BroadcastChannel` when unconfigured.
-- `src/components/Room.tsx` is the screen. The two panes never move in the DOM (moving the YouTube iframe would reload it); swapping only changes which grid area each one occupies.
+- `src/components/Room.tsx` is the screen, with `VideoPane`, `CallPane`, `NowPlaying` (the shared remote) and `LinkSheet` (the video picker) beside it. The two panes never move in the DOM (moving the YouTube iframe would reload it); swapping only changes which grid area each one occupies, and the browser's view transitions animate the change where they exist.
+
+## Look and feel
+
+All of it lives in `src/styles.css`: the colours, type and spacing are variables at the top. The glow behind the room is a blurred still of the current video. Typefaces (Fraunces for the few headlines, Figtree for everything else) and icons (Phosphor) are bundled, not fetched from a font service.
+
+- `public/icon.svg` is the app icon; the PNG icons are renders of it.
+- `public/og.jpg` is the picture shown when an invite link is sent in a message. `index.html` points at it by its full address, so change that if the site moves.
 
 ## Things to know
 

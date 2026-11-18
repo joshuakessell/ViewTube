@@ -1,8 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#17191f"/>
-  <rect x="96" y="150" width="320" height="150" rx="40" fill="#ff8a5c"/>
-  <rect x="56" y="232" width="92" height="140" rx="38" fill="#ffa680"/>
-  <rect x="364" y="232" width="92" height="140" rx="38" fill="#ffa680"/>
-  <rect x="120" y="290" width="272" height="82" rx="26" fill="#ffc2a6"/>
-  <path d="M232 196v70l58-35z" fill="#17191f"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b1e11"/>
+      <stop offset="1" stop-color="#0b0908"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="36%" r="56%">
+      <stop offset="0" stop-color="#ff8a52" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#ff7847" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffdcae"/>
+      <stop offset=".5" stop-color="#ff8a52"/>
+      <stop offset="1" stop-color="#c63a6b"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2e1e17"/>
+      <stop offset=".6" stop-color="#120d0b"/>
+      <stop offset="1" stop-color="#0b0908"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd9ad" stop-opacity=".95"/>
+      <stop offset=".3" stop-color="#ff7847" stop-opacity=".3"/>
+      <stop offset=".5" stop-color="#ff7847" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <rect x="100" y="84" width="312" height="176" rx="30" fill="url(#screen)"/>
+  <path d="M228 134v76l64-38z" fill="#2b1005" fill-opacity=".85" stroke="#2b1005" stroke-opacity=".85" stroke-width="12" stroke-linejoin="round"/>
+  <g fill="url(#body)" stroke="url(#rim)" stroke-width="4">
+    <circle cx="186" cy="298" r="52"/>
+    <path d="M92 512v-74c0-52 42-94 94-94s94 42 94 94v74z"/>
+    <circle cx="330" cy="290" r="56"/>
+    <path d="M230 512v-82c0-55 45-100 100-100s100 45 100 100v82z"/>
+    <path d="M40 512v-66c0-28 23-50 50-50h332c27 0 50 22 50 50v66z"/>
+  </g>
 </svg>
